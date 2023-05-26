@@ -222,7 +222,7 @@ class AuthController extends Controller
                   ->when($request->juju, function ($q, $juju) {
                       return $q->where('juju', '=', $juju);
                   })
-                  ->orderByDesc('departments.id')
+                  ->orderByDesc('music.id')
                   ->get();
           } catch (\Throwable $th) {
               //throw $th;

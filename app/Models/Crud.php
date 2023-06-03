@@ -10,4 +10,10 @@ class Crud extends Model
     use HasFactory;
     protected $guarded=['name'];
 
+public function user()
+{
+return $this->belongsTo(users::class);
+
+}
+
 }

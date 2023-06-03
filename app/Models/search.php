@@ -47,6 +47,11 @@ class search extends Model
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+    public function user()
+    {
+        return $this->belongsTo(users::class);
+    }
+    
 }
 
 

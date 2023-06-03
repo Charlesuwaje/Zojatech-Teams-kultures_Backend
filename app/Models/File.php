@@ -9,4 +9,12 @@ class File extends Model
 {
     use HasFactory;
     public $timestamp = false;
+    
+
+public function user()
+{
+return $this->belongsTo(users::class);
+
+}
+
 }

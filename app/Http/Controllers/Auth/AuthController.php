@@ -18,6 +18,7 @@ use App\Models\users;
 use App\Models\UserVerify;
 use App\Notifications\EmailNotification;
 use App\Traits\HttpResponses;
+use GrahamCampbell\ResultType\Success;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\Request;
@@ -178,16 +179,21 @@ class AuthController extends Controller
       public function logout(Request $request)
       {
           Auth::logout();
+        // Auth::user()->currentAccessToken()->delete(); 
 
           return response()->json(['message' => 'Successfully logged out']);
+        // return $this->success([
+        //     'message'=>'you have successfully logged out and your token has been deleted '
+        // ]);
       }
+    
       // search code.
 
       public function search(Request $request)
       {
-          $search = Music::query();
+          $search = DB::table('users','music','files');
           if ($request->query('keyword')) {
-              $search = $search->where('name', 'like', 'userame', 'music', 'files', 'email', '%'.$request->query('keyword'))->paginate('10');
+              $search = $search->where( 'like',  'title', '%'.$request->query('keyword'. '%'))->paginate('10');
           }
           if ($request->query('afro_beat') == 'afrobeat') {
               $search = $search->where('name', $request->query('afro'));
@@ -207,12 +213,13 @@ class AuthController extends Controller
                   ],
           ], 200);
       }
+      
 // filter
       public function filter(Request $request)
       {
           try {
               //code...
-              $filter = DB::table('')
+              $filter = DB::table('music')
                   ->when($request->afro_beat, function ($q, $afro_beat) {
                       return $q->where('afro_beat', '=', $afro_beat);
                   })
@@ -246,35 +253,219 @@ class AuthController extends Controller
       }
 
           //  payStack Payment gateway code
-          public function redirectToGateway(Request $request)
-          {
-              try {
-                  $ref = Paystack::genTranxRef();
-                  // dd($request->$ref);
+        //   public function redirectToGateway(Request $request)
+        //   {
+        //       try {
+        //           $ref = Paystack::genTranxRef();
+        //           // dd($request->$ref);
 
-                  $request['reference'] = $ref;
-                  $request['amount'] = $request->amount * 100;
 
-                  return Paystack::getAuthorizationUrl($request->all())->redirectNow();
-              } catch (\Exception $e) {
-                  return Redirect::back()->
-                                  withMessage(['msg' => 'The paystack token has expired.
-                                    Please refresh the page and try again.', 'type' => 'error']);
-              }
-          }
+        //           $request['reference'] = $ref;
+        //           $request['email'] = "charlesuwaje02@gmail.com";
+        //           $request['amount'] = $request->amount * 100;
 
+        //           return Paystack::getAuthorizationUrl($request->all())->redirectNow();
+        //       } catch (\Exception $e) {
+        //         return response()->json([
+        //         'status'=>false,
+        //         'message'=>$e->getmessage()],500);
+        //       }
+        //   }
+      
+      
+      
+                 // payment gate-way
+        // public function redirectToGateway(Request $request)
+        // {
+        //     try {
+        //         $ref = Paystack::genTranxRef();
+        //         $request['reference'] = $ref;
+        //         $request['email'] = $request->email;
+        //         $request['amount'] = $request->amount * 100;
+        //         $request['callback_url'] = route('payment.callback'); // Set the callback URL for Paystack to redirect after payment
+                
+        //         $headers = [
+        //             "Authorization: Bearer " .env("PAYSTACK_SECRET_KEY"),
+        //             "Content-Type: application/json"
+                    
+        //         ];
+        //         // return $headers;
+        //         $url = "https://api.paystack.co/transaction/initialize";
+        //         $ch = curl_init();
+        //         curl_setopt_array(
+        //             $ch,
+        //             array(
+        //                 CURLOPT_URL => $url,
+        //                 CURLOPT_RETURNTRANSFER => true,
+        //                 CURLOPT_ENCODING => '',
+        //                 CURLOPT_MAXREDIRS => 10,
+        //                 CURLOPT_TIMEOUT => 0,
+        //                 CURLOPT_SSL_VERIFYPEER => false,
+        //                 CURLOPT_HEADER => false,
+        //                 CURLOPT_REFERER => $url,
+        //                 CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36",
+        //                 CURLOPT_FOLLOWLOCATION => true,
+        //                 CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+        //                 CURLOPT_CUSTOMREQUEST => 'POST',
+        //                 CURLOPT_POSTFIELDS => json_encode($request->all()),
+        //                 CURLOPT_HTTPHEADER => $headers
+        //             ),
+        //         );
+    
+        //          $response = curl_exec($ch);
+    
+        //         curl_close($ch);
+    
+        //         $result = json_decode($response, true);
+    
+        //         if ($response) {
+        //             return $result;
+        //         } else {
+        //             return response([
+        //                'status' => curl_error($ch),
+        //              ], 404);
+        //          }
+        //      } catch (\Exception $e) {
+        //          return response()->json([
+        //              'status' => false,
+        //              'message' => $e->getMessage()
+        //          ], 500);
+        //     }
+        //  }
+        public function redirectToGateway(Request $request)
+    {
+        try {
+           $this->validate($request, [
+            'amount' => 'required|numeric',
+        ]);
+
+        $url = "https://api.paystack.co/transaction/initialize";
+        $amount = $request->amount;
+        $data = [
+            "amount" => $amount * 100,
+            "email" =>  $request->email,
+            "callback_url" => route('payment.callback'), //        Set the callback URL for Paystack to redirect after payment
+            "metadata" => [
+                'amount' => $amount
+            ],
+        ];
+         $headers = [
+                "Authorization: Bearer " . env("PAYSTACK_SECRET_KEY"),
+                "Content-Type: application/json"
+            ];
+
+            $url = "https://api.paystack.co/transaction/initialize";
+            $ch = curl_init();
+            curl_setopt_array(
+                $ch,
+                array(
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_HEADER => false,
+                    CURLOPT_REFERER => $url,
+                    CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36",
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST => 'POST',
+                    CURLOPT_POSTFIELDS => json_encode($data),
+                    CURLOPT_HTTPHEADER => $headers
+                ),
+            );
+
+            $response = curl_exec($ch);
+
+            curl_close($ch);
+
+            $result = json_decode($response, true);
+
+            if ($response) {
+                return $result;
+            } else {
+                return response([
+                    'status' => curl_error($ch),
+                ], 404);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
           /**
            * Obtain Paystack payment information.
            *
            * @return void
            */
-          public function handleGatewayCallback()
-          {
-              $paymentDetails = Paystack::getPaymentData();
+        //   public function handleGatewayCallback()
+        //   {
+        //       $paymentDetails = Paystack::getPaymentData();
 
-              return Paystack::getAuthorizationUrl($paymentDetails)->redirectNow();
-          }
-          public function create(Request $request){
+        //       return Paystack::getAuthorizationUrl($paymentDetails)->redirectNow();
+        //   }
+        public function handleGatewayCallback()
+        {
+            $data = request();
+            // return $data;
+            // dd($data);
+            $reference = $data->reference;
+    
+            // Set up the Paystack API URL
+            $url = "https://api.paystack.co/transaction/verify/$reference";
+            // Set up the authorization headers
+            $headers = [
+                "Authorization: Bearer " . env("PAYSTACK_SECRET_KEY"),
+                "Content-Type: application/json"
+            ];
+    
+            // Set up the curl request
+    //  return $headers;
+
+            $ch = curl_init();
+            curl_setopt_array(
+                $ch,
+                array(
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_ENCODING => '',
+                    CURLOPT_MAXREDIRS => 10,
+                    CURLOPT_TIMEOUT => 0,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_HEADER => false,
+                    CURLOPT_REFERER => $url,
+                    CURLOPT_USERAGENT => "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.86 Safari/537.36",
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    CURLOPT_CUSTOMREQUEST => 'GET',
+                    CURLOPT_HTTPHEADER => $headers
+                ),
+            );
+    
+            // Send the curl request and get the response
+            $response = curl_exec($ch);
+            // return $response;
+            
+            curl_close($ch);
+    
+            $result = json_decode($response, true);
+            // return $result;
+    
+            // Check the payment verification result
+            if (isset($result['status']) && $result['status'] === true) {
+                $amount = $result['data']['metadata']['amount'];
+                  return Paystack::getAuthorizationUrl($amount)->redirectNow();
+                // return PayStack::getAuthorizationUrl($result['data']['metadata']['amount'])->redirectNow();
+                // return "sucessfully";
+            } else     
+                return 'Payment verification failed';
+            }
+         
+         
+            public function create(Request $request){
             $request->validate([
                 'country'=>'required|string',
                    'state'=>'required|string',
@@ -323,41 +514,43 @@ class AuthController extends Controller
        
          public function verify(EmailVerificationRequest $request)
           {
-              if ($request->users()->hasVerifiedEmail()) {
-                  return [
-                      'message' => 'Email already verified',
-                  ];
-              }
+            //   if ($request->users()->hasVerifiedEmail()) {
+            //       return [
+            //           'message' => 'Email already verified',
+            //       ];
+            //   }
 
-              if ($request->users()->markEmailAsVerified()) {
-                  event(new Verified($request->user()));
-              }
+            //   if ($request->users()->markEmailAsVerified()) {
+            //       event(new Verified($request->user()));
+            //   }
 
-              return [
-                  'message' => 'Email has been verified',
-              ];
+            //   return [
+            //       'message' => 'Email has been verified',
+            //   ];
           }
-          public function veriyToken(Request $request)
+          public function verifyToken(Request $request)
           {
               if (empty($request->token)) {
                 return $this->error('', 'Credentials do not match invalid Token', 401);
 
               }
-                 $check = UserVerify::where('token', $request->token)->first();
+                 $check = users::where('token', $request->token)->first();
               if (is_Null($check)) {
                 return $this->error('', 'Credentials do not match invalid  Token', 401);
 
               }
-              $user = Users::where('email', $check->user->email);
+              $user = users::where('email', $check->user->email);
               if (is_null($check->user->email_verified_at)) {
                   $user->update([
                       'email_verified_at' => NOW(),
                   ]);
               }
               $token = $user->first()->createToken('myapp')->plainTextToken;
-              return $this->success('New user added', $token);
+              return $this->success('sucessfully verifield', $token);
           }
-          public function status(Request $request, $id)
+         
+         
+                  public function status(Request $request, $id)
           {
               try {
       

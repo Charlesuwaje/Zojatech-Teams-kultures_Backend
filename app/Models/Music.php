@@ -17,6 +17,11 @@ class Music extends Model
     ];
     public function user()
     {
+        return $this->belongsTo(users::class);
+    }
+    public function music()
+    {
         return $this->belongsTo(Music::class);
     }
 }
+

@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('userverify', function (Blueprint $table) {
+        Schema::create('user_verify', function (Blueprint $table) {
             $table->id();
             $table->integer('user_id');
             $table->string('token');
@@ -28,6 +28,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('userverify');
+        Schema::dropIfExists('user_verify');
     }
 };

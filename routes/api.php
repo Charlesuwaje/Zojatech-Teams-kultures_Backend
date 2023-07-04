@@ -32,8 +32,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
  
       Route::group(['middleware'=>['auth:sanctum']],function (){ 
   
+    // Route::post('/status/{id}', [AuthController::class, 'status']);
     Route::get('/Verifyuser', [AuthController::class, 'verifyToken'])->name('verification.verify')->middleware('auth:sanctum');  
-    Route::post('/status/{id}', [AuthController::class, 'status']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/CodeCheck', [AuthController::class, 'codeCheck']);
     // Route::post('/PasswordResetOpt', [AuthController::class, 'PasswordResetOpt']);

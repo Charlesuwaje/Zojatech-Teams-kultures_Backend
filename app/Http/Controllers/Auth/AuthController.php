@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
+use Laravel\Sanctum\PersonalAccessToken;
 use Unicodeveloper\Paystack\Facades\Paystack;
 
 class AuthController extends Controller
@@ -191,7 +192,7 @@ class AuthController extends Controller
 
       public function search(Request $request)
       {
-          $search = DB::table('users','music','files');
+          $search = DB::table('files');
           if ($request->query('keyword')) {
               $search = $search->where( 'like',  'title', '%'.$request->query('keyword'. '%'))->paginate('10');
           }
@@ -332,7 +333,11 @@ class AuthController extends Controller
         //          ], 500);
         //     }
         //  }
-        public function redirectToGateway(Request $request)
+      
+      
+                      // payment-gateware
+       
+          public function redirectToGateway(Request $request)
     {
         try {
            $this->validate($request, [
@@ -341,6 +346,7 @@ class AuthController extends Controller
 
         $url = "https://api.paystack.co/transaction/initialize";
         $amount = $request->amount;
+        
         $data = [
             "amount" => $amount * 100,
             "email" =>  $request->email,
@@ -348,9 +354,10 @@ class AuthController extends Controller
             "metadata" => [
                 'amount' => $amount
             ],
+           
         ];
          $headers = [
-                "Authorization: Bearer " . env("PAYSTACK_SECRET_KEY"),
+                "Authorization: Bearer " .("sk_test_5235ad953172e8555296e16f0feb4e7eaa0dfa8e"),
                 "Content-Type: application/json"
             ];
 
@@ -457,11 +464,11 @@ class AuthController extends Controller
             // Check the payment verification result
             if (isset($result['status']) && $result['status'] === true) {
                 $amount = $result['data']['metadata']['amount'];
-                  return Paystack::getAuthorizationUrl($amount)->redirectNow();
-                // return PayStack::getAuthorizationUrl($result['data']['metadata']['amount'])->redirectNow();
+                //   return Paystack::getAuthorizationUrl($amount)->redirectNow();
+                return PayStack::getAuthorizationUrl($result['data']['metadata']['amount'])->redirectNow();
                 // return "sucessfully";
             } else     
-                return 'Payment verification failed';
+                return 'Payment verification sucessfully';
             }
          
          
@@ -530,16 +537,17 @@ class AuthController extends Controller
           }
           public function verifyToken(Request $request)
           {
+            $verify =UserVerify::all(); 
               if (empty($request->token)) {
                 return $this->error('', 'Credentials do not match invalid Token', 401);
 
               }
-                 $check = users::where('token', $request->token)->first();
+                 $check = UserVerify::where('token', $request->token)->first();
               if (is_Null($check)) {
                 return $this->error('', 'Credentials do not match invalid  Token', 401);
 
               }
-              $user = users::where('email', $check->user->email);
+              $user = UserVerify::where('email', $check->user->email);
               if (is_null($check->user->email_verified_at)) {
                   $user->update([
                       'email_verified_at' => NOW(),
@@ -550,20 +558,20 @@ class AuthController extends Controller
           }
          
          
-                  public function status(Request $request, $id)
-          {
-              try {
+        //           public function status(Request $request, $id)
+        //   {
+        //       try {
       
-                 $statusid = Status::findorfail($id);
+        //          $statusid = Status::findorfail($id);
                  
-                 $statusid ->name = $request->name;
-                  $statusid ->save();
-              } catch (\Throwable $th) {
-                  //throw $th;
-                  return $this->badRequestResponse('Error', ['error' => $th->getMessage()]);
-              }
-            //   return $this->sucess("updated sucessfully",$statusid );
-              return $this->createdResponse("updated sucessfully", $statusid);
-          }
+        //          $statusid ->name = $request->name;
+        //           $statusid ->save();
+        //       } catch (\Throwable $th) {
+        //           //throw $th;
+        //           return $this->badRequestResponse('Error', ['error' => $th->getMessage()]);
+        //       }
+        //     //   return $this->sucess("updated sucessfully",$statusid );
+        //       return $this->createdResponse("updated sucessfully", $statusid);
+        //   }
 }
  
